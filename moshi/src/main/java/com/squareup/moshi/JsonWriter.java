@@ -360,12 +360,32 @@ public abstract class JsonWriter implements Closeable, Flushable {
 
   /**
    * Writes {@code source} directly without encoding its contents.
-   * Since no validation is performed, {@link #setSerializeNulls} and other writer configurations
-   * are not respected.
    *
-   * @return this writer.
+   * @see #valueSink()
+   * @deprecated Use: {@code try (BufferedSink sink = writer.valueSink()) { source.readAll(sink): }}
    */
-  public abstract JsonWriter value(BufferedSource source) throws IOException;
+  @Deprecated
+  public final JsonWriter value(BufferedSource source) throws IOException {
+    if (promoteValueToName) {
+      throw new IllegalStateException(
+          "BufferedSource cannot be used as a map key in JSON at path " + getPath());
+    }
+    try (BufferedSink sink = valueSink()) {
+      source.readAll(sink);
+    }
+    return this;
+  }
+
+  /**
+   * Returns a {@link BufferedSink} into which arbitrary data can be written without any additional
+   * encoding. You <b>must</b> call {@link BufferedSink#close()} before interacting with this
+   * {@code JsonWriter} instance again.
+   * <p>
+   * Since no validation is performed, options like {@link #setSerializeNulls} and other writer
+   * configurations are not respected (if the content is itself JSON).
+   */
+  @CheckReturnValue
+  public abstract BufferedSink valueSink() throws IOException;
 
   /**
    * Changes the writer to treat the next value as a string name. This is useful for map adapters so
