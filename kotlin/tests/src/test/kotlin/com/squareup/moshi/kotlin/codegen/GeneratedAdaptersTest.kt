@@ -1210,6 +1210,22 @@ class GeneratedAdaptersTest {
       assertThat(e).hasMessageContaining("Failed to find the generated JsonAdapter class")
     }
   }
+
+  @JsonClass(generateAdapter = true)
+  data class ClassWithFieldJson(
+      @field:Json(name = "_links") val links: String
+  ) {
+    @field:Json(name = "_ids") var ids: String? = null
+  }
+
+  // Regression test to ensure annotations with field site targets still use the right name
+  @Test fun classWithFieldJsonTargets() {
+    val moshi = Moshi.Builder().build()
+    val adapter = moshi.adapter<ClassWithFieldJson>()
+    //language=JSON
+    val instance = adapter.fromJson("""{"_links": "link", "_ids": "id" }""")!!
+    assertThat(instance).isEqualTo(ClassWithFieldJson("link").apply { ids = "id" })
+  }
 }
 
 // Has to be outside to avoid Types seeing an owning class
